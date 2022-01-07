@@ -6,10 +6,15 @@
 #include <vector>
 #include <random>
 
+/*
+Dining Philosophers implementation
+
+*/
+
 int rng() {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,40);
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,100);
     return dist6(rng);
 }
 
@@ -51,8 +56,12 @@ public:
         thinktime+=thinktime_temp;
     }
     
-    void get_fork(){
-        ptr_l->lock(); ptr_r->lock();
+    bool get_fork(){
+        if ((ptr_l->try_lock() && ptr_r->try_lock())==true) {
+            return true;
+        } else {
+            return false;
+        }
     }
     
     void release_fork(){
@@ -60,16 +69,17 @@ public:
     }
 
     void eat(){
-        get_fork();
-        {
+        if (!get_fork()){
+            think();
+        } else {
             std::cout << name << " started eating.\n";
             eattime_temp = rng();
             std::this_thread::sleep_for(std::chrono::milliseconds(eattime_temp));
             std::cout << name << " stopped eating.\n";
             eattime += eattime_temp;
         }
+
         release_fork();
-        think();
     }
 
     int get_eattime() {
@@ -79,11 +89,6 @@ public:
     int get_thinktime() {
         return thinktime_temp;
     }
-    
-    void meal(){
-        std::thread thread(&Philosopher::eat, this);
-        thread.join();
-    }
 };
 
 class Table{
@@ -91,6 +96,7 @@ class Table{
     std::vector<std::string> names;
     std::vector<Fork*> forklist_ptr;
     std::vector<Philosopher*> phillist_ptr;
+    std::thread* test;
 
     unsigned int N=0;
     float t = 0;
@@ -101,8 +107,9 @@ public:
     Table(std::vector<std::string> _names, unsigned int _N, float _tf){
         N = _N;
         tf = _tf;
-        /* This section dynamically insantiates the required classes so that 
-            I dont have to explicitly create a bunch of objects myself
+        /* 
+        This section dynamically insantiates the required classes so that 
+        I dont have to explicitly create a bunch of objects myself
         */
         for (int i=0; i<N; i++) {
             names.push_back(_names[i]);
@@ -118,11 +125,15 @@ public:
             }
         }
 
-        while (t<tf){
+        while (t<tf){ 
+
+            /* Dynamic thread spawning*/
             for (int i=0;i<N;i++) {
-                phillist_ptr[i]->meal();
-                t+= static_cast< float >(phillist_ptr[i]->get_thinktime() + phillist_ptr[i]->get_eattime())/1000; 
+                test = new std::thread{&Philosopher::eat,phillist_ptr[i]};
+
+                t+= static_cast< float >(phillist_ptr[i]->get_thinktime() + phillist_ptr[i]->get_eattime())/1000;
             }
+            test->join();
         }
     }
 
@@ -139,12 +150,9 @@ public:
 
 int main() {
     std::vector<std::string> names_ = {"En","To","Tre","Fire","Fem","Seks","Syv","8","Ni","Ti"};
-
-    unsigned int num;
-    float simtime;
-
-    std::cout << "\nSimtime: "; std::cin >> simtime;
-    std::cout << "\nNumber of diners: "; std::cin >> num;
+    int num;
+    std::cout << "How many diners? "; std::cin>>num;
+    float simtime = 6.0;
 
     Table table(names_, num, simtime);
 
