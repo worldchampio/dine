@@ -1,161 +1,152 @@
 #include <iostream>
+#include <chrono>
+#include <mutex>
 #include <thread>
-#include <mutex>  // "Fork"
-#include <chrono> //thread sleep
-#include <vector>
 #include <string>
-#include <random> //RNG generation
+#include <vector>
+#include <random>
+
+/*
+Dining Philosophers implementation
+
+#TODO:
+    la tråden leve hele programscopet -> provoser deadlock
+
+
+*/
 
 int rng() {
-    // RNG: 1-500
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,100);
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,40);
     return dist6(rng);
 }
 
 class Fork{
 public:
     std::mutex fork;
-    std::mutex* fork_ptr=&fork;
+    std::mutex *fork_pointer = &fork;
 };
 
 class Philosopher{
-    
     std::string name;
-    std::mutex *ptr_r, *ptr_l;
-
-    float t_eat = 0.0;
-    float t_think = 0.0;
-
-    int rngtime_think=0;
-    int rngtime_eat=0;
+    std::mutex* ptr_l;
+    std::mutex* ptr_r;
+    int eattime, thinktime, eattime_temp, thinktime_temp;
 
 public:
-    Philosopher(std::string _name, std::mutex* _ptr_r, std::mutex* _ptr_l){
-        name  = _name;
-        ptr_r = _ptr_r;
+    Philosopher(std::string _name, std::mutex* _ptr_l, std::mutex* _ptr_r ){
         ptr_l = _ptr_l;
+        ptr_r = _ptr_r;
+        name  = _name;
     }
 
     ~Philosopher(){
-        std::cout << name << " ate for "<< get_eattime() <<"s, thought for "<< get_thinktime()<<"s.\n";
-    }
-
-    float get_eattime(){
-        return t_eat/1000;
-    }
-
-    float get_thinktime(){
-        return t_think/1000;
-    }
-
-    // Temp get-functions
-    float get_eat_temp(){
-        return static_cast< float >(rngtime_eat);
-    }
-
-    float get_think_temp(){
-        return static_cast< float >(rngtime_think);
+        std::cout << name <<" left the table, ate for " 
+                  << (static_cast< float >(eattime))/1000 
+                  << "s, thought for " 
+                  << (static_cast< float >(thinktime))/1000<<"s.\n";
     }
 
     void think(){
-        std::cout << name << " is thinking\n";
-
-        rngtime_think = rng();    // Pass to rng-generator
-        t_think += rngtime_think; // Store thinking time
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(rngtime_think));
-
-        std::cout << name << " is done thining\n";
+        std::cout << name << " started thinking.\n";
+        thinktime_temp = rng();
+        std::this_thread::sleep_for(std::chrono::milliseconds(thinktime_temp));
+        std::cout << name << " stopped thinking.\n";
+        thinktime+=thinktime_temp;
+    }
+    
+    void get_fork(){
+        ptr_l->lock(); ptr_r->lock();
+    }
+    
+    void release_fork(){
+        ptr_l->unlock(); ptr_r->unlock();
     }
 
-    void get_forks() {
-        ptr_l->lock(); 
-        ptr_r->lock();
-    }
-
-    void put_forks() {
-        ptr_l->unlock(); 
-        ptr_r->unlock();
-    }
-
-    void eat() {
-    /*
-        Attempt to eat, locking the appropriate mutex to deny adjacent diners
-        access. When finished eating, release mutex locks and think.
-
-        rng() is called to make the philosopher randomly eat or think 
-    */
-        if (rng()>50) {
-            this->think();
-        } else {
-            this->get_forks();
-
-            rngtime_eat = rng();   //pass to rng-generator
-            t_eat += rngtime_eat;  //store eating time
-
-            std::cout << name << " started eating\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(rngtime_eat));
-
-            this->put_forks();
-            std::cout << name <<" is done eating\n";   
+    void eat(){
+        get_fork();
+        {
+            std::cout << name << " started eating.\n";
+            eattime_temp = rng();
+            std::this_thread::sleep_for(std::chrono::milliseconds(eattime_temp));
+            std::cout << name << " stopped eating.\n";
+            eattime += eattime_temp;
         }
+        release_fork();
+        think();
     }
 
+    int get_eattime() {
+        return eattime_temp;
+    }
+
+    int get_thinktime() {
+        return thinktime_temp;
+    }
+    
     void meal(){
-        /*
-        Create a thread and call eat() from Philosopher class
-        */
         std::thread thread(&Philosopher::eat, this);
-            
         thread.join();
     }
 };
 
-void dine() {
-    /*
-    Hold diner names, instantiate Philosopher() with pointers to appropriate mutexes and
-    commence meal for tf (6) seconds.
-    */
-    std::vector<std::string> names = {"Descartes","Nietszche","Robespierre","Franklin","Hamilton"};
-    
-    // Construct five forks
-    Fork f1; Fork f2; Fork f3; Fork f4; Fork f5;
+class Table{
+    std::vector<std::string> names;
+    std::vector<Fork*> forklist_ptr;
+    std::vector<Philosopher*> phillist_ptr;
+    unsigned int N;
+    float t = 0;
+    float tf;
 
-                            // Right fork   Left fork
-    Philosopher desc(names[0], f1.fork_ptr, f5.fork_ptr);
-    Philosopher niet(names[1], f2.fork_ptr, f1.fork_ptr);
-    Philosopher robe(names[2], f3.fork_ptr, f2.fork_ptr);
-    Philosopher fran(names[3], f4.fork_ptr, f3.fork_ptr);
-    Philosopher hami(names[4], f5.fork_ptr, f4.fork_ptr);
+public:
+    Table(std::vector<std::string> _names, unsigned int _N, float _tf){
+        N = _N;
+        tf = _tf;
+        /* This section dynamically insantiates the required classes so that 
+            I dont have to explicitly create a bunch of objects myself
+        */
+        for (int i=0; i<N; i++) {
+            names.push_back(_names[i]);
+            forklist_ptr.push_back(new Fork);
+        }
 
-    float t = 0.0;
-    float tf= 4.0;
+        for (int j=0; j<N; j++) {
+            if (j==0) { // exception for first instantiation
+                phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[j]->fork_pointer,forklist_ptr[N-1]->fork_pointer));    
+            } else {
+                phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[j]->fork_pointer,forklist_ptr[j-1]->fork_pointer));
+            }
+        }
 
-    while (t<tf) {
-        // Start meal
-        robe.meal();
-        desc.meal();
-        niet.meal();
-        hami.meal();
-        fran.meal();
-
-        // Drive simtime with eat/think-time
-        t+=(desc.get_think_temp()+desc.get_eat_temp() + niet.get_think_temp()+niet.get_eat_temp() + robe.get_think_temp()+robe.get_eat_temp() + fran.get_think_temp()+fran.get_eat_temp() + hami.get_think_temp()+hami.get_eat_temp())/1000;
+        while (t<tf){
+            for (int i=0; i<N; i++) {
+                phillist_ptr[i]->meal();
+                t+= static_cast< float >(phillist_ptr[i]->get_thinktime() + phillist_ptr[i]->get_eattime())/1000; 
+            }
+        }
     }
-    // Print results after while-loop
-    std::cout << "\nSum eating time: \t" << std::to_string(desc.get_eattime()+niet.get_eattime()+robe.get_eattime()+fran.get_eattime()+hami.get_eattime())<<"s.\n";
-    std::cout << "Sum thinking time: \t" << std::to_string(desc.get_thinktime()+niet.get_thinktime()+robe.get_thinktime()+fran.get_thinktime()+hami.get_eattime())<<"s.\n";
-    std::cout << "Simtime: \t\t" << tf << "s.\n"
-              << "Runtime: \t\t" << t << "s.\n"
-              << "Difference: \t\t" << t-tf << "s.\n\n";
 
-}
+    ~Table(){
+        // Garbage collection
+        for (int i=0; i<N; i++) {
+        delete phillist_ptr[i];
+        delete forklist_ptr[i];
+        }
+        std::cout << "\n\nTable was smashed.\n";
+    }
+};
 
 int main() {
+    std::vector<std::string> names_ = {"En","To","Tre","Fire","Fem","Seks","Syv","8","Ni","Ti"};
 
-    dine();
+    unsigned int num;
+    float simtime;
+
+    std::cout << "\nSimtime: "; std::cin >> simtime;
+    std::cout << "\nNumber of diners: "; std::cin >> num;
+
+    Table table(names_, num, simtime);
 
     return 0;
 }
