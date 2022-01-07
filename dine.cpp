@@ -6,15 +6,6 @@
 #include <vector>
 #include <random>
 
-/*
-Dining Philosophers implementation
-
-#TODO:
-    la tråden leve hele programscopet -> provoser deadlock
-
-
-*/
-
 int rng() {
     std::random_device dev;
     std::mt19937 rng(dev());
@@ -29,10 +20,14 @@ public:
 };
 
 class Philosopher{
+
     std::string name;
     std::mutex* ptr_l;
     std::mutex* ptr_r;
-    int eattime, thinktime, eattime_temp, thinktime_temp;
+    int eattime=0;
+    int thinktime=0;
+    int eattime_temp=0;
+    int thinktime_temp=0;
 
 public:
     Philosopher(std::string _name, std::mutex* _ptr_l, std::mutex* _ptr_r ){
@@ -92,14 +87,17 @@ public:
 };
 
 class Table{
+
     std::vector<std::string> names;
     std::vector<Fork*> forklist_ptr;
     std::vector<Philosopher*> phillist_ptr;
-    unsigned int N;
+
+    unsigned int N=0;
     float t = 0;
-    float tf;
+    float tf= 0;
 
 public:
+
     Table(std::vector<std::string> _names, unsigned int _N, float _tf){
         N = _N;
         tf = _tf;
@@ -111,6 +109,7 @@ public:
             forklist_ptr.push_back(new Fork);
         }
 
+        // Create philosopher objects once forks are done
         for (int j=0; j<N; j++) {
             if (j==0) { // exception for first instantiation
                 phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[j]->fork_pointer,forklist_ptr[N-1]->fork_pointer));    
@@ -120,7 +119,7 @@ public:
         }
 
         while (t<tf){
-            for (int i=0; i<N; i++) {
+            for (int i=0;i<N;i++) {
                 phillist_ptr[i]->meal();
                 t+= static_cast< float >(phillist_ptr[i]->get_thinktime() + phillist_ptr[i]->get_eattime())/1000; 
             }
@@ -130,10 +129,11 @@ public:
     ~Table(){
         // Garbage collection
         for (int i=0; i<N; i++) {
-        delete phillist_ptr[i];
-        delete forklist_ptr[i];
+            delete phillist_ptr[i];
+            delete forklist_ptr[i];
         }
-        std::cout << "\n\nTable was smashed.\n";
+        std::cout << "\n\nTable was smashed. Meal lasted " 
+                  << t << "s, " << t-tf << "s overtime.\n";
     }
 };
 
