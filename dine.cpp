@@ -17,14 +17,14 @@ written scaleable in terms of memory and instantiation. This was done taking the
 number in a for loop and casting the index to a string, creating n diners:
 diner 1, diner 2, ..., diner n
 
-The simulation time is driven by the integer (1-100) returned from Philosopher::rng(),
+The simulation time is driven by the integer (1-50) returned from Philosopher::rng(),
 which is also passed to the chrono::sleep_for() function so that every time any given 
 philosopher eats/thinks, the duration will be random. As a result, time t stored in
-Table class is written to by all diners, which is terrible practice -> fix????
+Table class is written to by all diners, which is terrible practice -> fix
 
 */
 
-class Fork
+class Fork // Holds fork (mutex) and public ptr 
 {
     std::mutex fork;
 public:
@@ -41,7 +41,10 @@ class Philosopher // impl. a diner, taking in name, fork ptrs then logs eat/thin
     int eattime   = 0;
     int thinktime = 0;
 
-    // Stores the individual calls to rng() to drive simulationtime
+    /*
+    Stores the individual calls to rng() to drive simulationtime
+    Named temp because the number is always overwritten next iteration
+    */
     int eattime_temp   = 0;
     int thinktime_temp = 0;
 
@@ -49,10 +52,10 @@ class Philosopher // impl. a diner, taking in name, fork ptrs then logs eat/thin
     int thinkcounter = 0;
     bool eating = false;
 
-    int rng() {
+    int rng() {//Private as its only called within the class
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist6(1,40);
+        std::uniform_int_distribution<std::mt19937::result_type> dist6(1,50);
         return dist6(rng);
     }
 
@@ -93,35 +96,32 @@ public:
     }
     
     void release_fork(){
-        ptr_r->unlock(); ptr_l->unlock();
+       ptr_r->unlock(); ptr_l->unlock();
     }
 
     void eat(){
         /*
-        This implementation is messy, so:
-
-        The philosopher will attempt to lock the mutexes 
-        corresponding to the forks available from its position.
-        If it cant, it will think. Once it has thought, it will attempt
-        to eat again, on repeat. The aim was to make eating prioritized
-        over thinking.
+        Attempt to get forks->eat, and think if it cannot eat
         */
         if(!get_fork()){
             think();
         } else {
             assert(eating==true); // Will abort execution if mutex lock works incorrectly
-
-            eatcounter++;
+            
             std::cout << name << " started eating.\n";
+            
+            eatcounter++;
             eattime_temp = rng();
-            std::this_thread::sleep_for(std::chrono::milliseconds(eattime_temp));
-            std::cout << name << " stopped eating.\n";
             eattime += eattime_temp;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(eattime_temp));
+            
+            std::cout << name << " stopped eating.\n";
             release_fork();
             eating = false;
         }
     }
-
+    
     int get_eattime() {
         return eattime_temp;
     }
@@ -132,51 +132,68 @@ public:
 };
 
 class Table //Table keeps track of all diners, forks and starts/ends the meal
-{    
+{
     std::vector<std::string> names;
     std::vector<Fork*> forklist_ptr;
     std::vector<Philosopher*> phillist_ptr;
-    std::thread* thread_ptr;
+    std::vector<int> index;
 
+    std::thread* thread_ptr;
+    
     unsigned int N=0;
     float t = 0;
-    float tf= 0;
+    float tf;
 
 public:
-    Table(std::vector<std::string> _names, unsigned int _N, float _tf){
+    Table(unsigned int _N){
         N = _N;
-        tf = _tf;
-        /* This section dynamically insantiates the required classes so that 
-            I dont have to explicitly create a bunch of objects myself
+        tf = 1.5*N;
+
+        /*
+        Automatic name creation
+        Alternatively, a vector of strings could be passed
+        to the constructor with actual names, althought its
+        length will limit the simulation scalability, ie. number of diners.
         */
         for (int i=0; i<N; i++) {
-            names.push_back(_names[i]);
+            names.push_back("Diner "+std::to_string(i+1));
             forklist_ptr.push_back(new Fork);
+            index.push_back(i); // Make this vector to use as for-loop range
         }
 
-        /* Create philosopher objects once forks are done
-            i: 0, 1, 2, ... , N-1
-            i=0   -> must share with last = N-1
-            i=N-1 -> must share with first = 0
+        /* 
+        Create philosopher objects once forks are done
+        Forks are implemented as circular, first philosopher uses left N-1 and right 0, 
+        all the others use left(j-1) and right (j), the last philosopher uses
+        left(j-1) and right(jmax=N-1) -> first and last share, for N=5:
+        obj | i | left | right
+        ----+---+------+------
+        ph1 | 0 | N-1  | 0
+        ph2 | 1 | 0    | 1
+        ph3 | 2 | 1    | 2
+        ph4 | 3 | 2    | 3
+        ph5 | 4 | 3    | N-1
+        ----+---+------+------
         */
-        for (int j=0; j<N; j++) {
+        for (auto j : index) {
             if (j==0) { // exception for first instantiation
                 phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[N-1]->fork_pointer,forklist_ptr[j]->fork_pointer));
-
-            } else if(j==N-1){ // exception for last
-                phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[0]->fork_pointer,forklist_ptr[j]->fork_pointer));
-            
             } else {
                 phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[j-1]->fork_pointer,forklist_ptr[j]->fork_pointer));
             }
         }
 
+        /* 
+        Start meal by calling spawning N threads with 
+        callable Philosopher::eat and pointer to 
+        philosopher objects
+        */        
         while (t<tf){ 
-
             /* Dynamic thread spawning*/
-            for (int i=0;i<N;i++) {
+            for (auto i : index) {
                 thread_ptr = new std::thread{&Philosopher::eat,phillist_ptr[i]};
 
+                // Update simulation time
                 t+= static_cast< float >(phillist_ptr[i]->get_thinktime() + phillist_ptr[i]->get_eattime())/1000;
             }
             thread_ptr->join();
@@ -188,31 +205,23 @@ public:
         Iterate through the list of pointers to philisopher 
         and fork objects, and delete
         */
-        for (int i=0; i<N; i++) {
+        for (auto i : index) {
             delete phillist_ptr[i];
             delete forklist_ptr[i];
         }
-        std::cout << "\n\nMeal lasted " 
+        std::cout << "\nMeal lasted " 
                   << t << "s, " << t-tf << "s overtime.\n";
     }
 };
 
-int main() 
+int main()
 {
-    std::vector<std::string> names_;
-    
     int num;
     
-    std::cout << "How many diners? "; 
+    std::cout << "How many diners: "; 
     std::cin >> num;
-    
-    float simtime = 1.5*num;
-
-    for (int i=0; i<num; i++) {
-        names_.push_back("Diner "+std::to_string(i+1));
-    }
-
-    Table table(names_, num, simtime);
+  
+    Table table(num);
 
     return 0;
 }
