@@ -8,19 +8,8 @@
 #include <random>
 
 /*
+
 Dining Philosophers implementation
-
-This was an exercise in using threads, mutexes, dynamic memory allocation and general OOP. 
-Currently, the only limiting factor of the table size (no. of philosophers) is entries in 
-the vector placed in main() holding the names. By expanding it, every other aspect is 
-written scaleable in terms of memory and instantiation. This was done taking the input 
-number in a for loop and casting the index to a string, creating n diners:
-diner 1, diner 2, ..., diner n
-
-The simulation time is driven by the integer (1-50) returned from Philosopher::rng(),
-which is also passed to the chrono::sleep_for() function so that every time any given 
-philosopher eats/thinks, the duration will be random. As a result, time t stored in
-Table class is written to by all diners, which is terrible practice -> fix
 
 */
 
