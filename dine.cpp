@@ -51,7 +51,8 @@ public:
         std::cout << name << " ate for " << static_cast<float>(t_eat_sum)/1000
                   << "s, (" << n_eat 
                   << " times), thought for " << static_cast<float>(t_think_sum)/1000 
-                  << "s, (" << n_think <<" times)"<<std::endl;
+                  << "s, \t(" << n_think <<" times, \t\t";
+        std::cout << round(t_eat_sum/t)/10 <<"\% eattime) "<<std::endl;
         
     }
 
@@ -83,7 +84,7 @@ public:
     void eat(){
         assert(is_eating==true);
         std::cout << name << " started eating"<<std::endl;
-        t_eat = rng()+50;
+        t_eat = rng();
         t_eat_sum += t_eat;
         n_eat++;
         std::this_thread::sleep_for(std::chrono::milliseconds(t_eat));
@@ -101,6 +102,7 @@ public:
                 release_forks();
             } else {
                 eat();
+                think();
             }
             t += static_cast<float>(t_think + t_eat)/1000;
         }
@@ -144,6 +146,9 @@ public:
     }
 
     ~Table(){
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
         for (auto d : range) {
             phil_vec[d]->lifethread.join();
             delete fork_vec[d];
