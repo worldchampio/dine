@@ -1,61 +1,36 @@
 #include <iostream>
 #include <chrono>
-#include <mutex>
 #include <thread>
-#include <string>
+#include <mutex>
 #include <vector>
+#include <string>
 #include <assert.h>
 #include <random>
-#include <cmath>
 
-/*
-Dining Philosophers implementation
-
-This was an exercise in using threads, mutexes, dynamic memory allocation and general OOP. 
-The only limiting factor of the table size (no. of philosophers) is names entries the vector
-holding the names. By expanding it, every other aspect is written scaleable in terms of memory
-and instantiation. This was done taking the input number N in a for loop and casting the index
-to a string, creating N diners: { diner 1, diner 2, ..., diner N }
-
-The simulation time is driven by the integer (1-50) returned from Philosopher::rng(),
-which is also passed to the chrono::sleep_for() function so that every time any given 
-philosopher eats/thinks, the duration will be random. As a result, time t stored in
-Table class is written to by all diners -> problem?
-*/
-enum{
-
-}
-
-// Holds fork (mutex) and public ptr
-class Fork {
+class Fork{
     std::mutex fork;
 public:
-    std::mutex *fork_pointer = &fork;
+    std::mutex* f_ptr = &fork;
 };
 
-// Impl. a diner, taking in name, fork ptrs then logs eat/think time
-class Philosopher {
+class Philosopher{
+    //std::thread lifethread;
+    std::mutex * ptr_l, *ptr_r;
+    std::string name = "";
 
-    std::string name = {""};
-    std::mutex* ptr_l;
-    std::mutex* ptr_r;
+    volatile float t = 0.0;
+    volatile float t_end = 0.0;
+    
+    volatile int t_think = 0;
+    volatile int t_think_sum = 0;
+    volatile int n_think = 0;
+    volatile int t_eat = 0;
+    volatile int t_eat_sum = 0;
+    volatile int n_eat = 0;
 
-    // Stores the sum of all time spent eating/thinking
-    int eattime   = 0;
-    int thinktime = 0;
+    bool is_eating = false;
 
-    /*
-    Stores the individual calls to rng() to drive simulationtime
-    Named temp because the number is always overwritten next iteration
-    */
-    int eattime_temp   = 0;
-    int thinktime_temp = 0;
-
-    int eatcounter   = 0;
-    int thinkcounter = 0;
-    bool eating = false;
-
-    int rng() {//Private as its only called within the class
+    int rng() {
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist6(1,50);
@@ -63,193 +38,125 @@ class Philosopher {
     }
 
 public:
-    Philosopher(std::string _name, std::mutex* _ptr_l, std::mutex* _ptr_r ){
+    std::thread lifethread;
+
+    Philosopher(std::string _name, float _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r){
+        name = _name;
+        t_end= _t_end;
         ptr_l = _ptr_l;
         ptr_r = _ptr_r;
-        name  = _name;
     }
 
-    ~Philosopher(){
-        std::cout << name <<" ate for " 
-                  << (static_cast< float >(eattime))/1000 
-                  << "s ("<<eatcounter<<" times), thought for " 
-                  << (static_cast< float >(thinktime))/1000<<"s ("
-                  << thinkcounter << " times). \n";
+    ~Philosopher(){        
+        std::cout << name << " ate for " << static_cast<float>(t_eat_sum)/1000
+                  << "s, (" << n_eat 
+                  << " times), thought for " << static_cast<float>(t_think_sum)/1000 
+                  << "s, (" << n_think <<" times)"<<std::endl;
+        
     }
 
-    void think(){
-        std::cout << name << " started thinking.\n";
-        thinkcounter++;
-        thinktime_temp = rng();
-        thinktime += thinktime_temp;
-    
-        std::this_thread::sleep_for(std::chrono::milliseconds(thinktime_temp));
-        std::cout << name << " stopped thinking.\n";    
-    }
-
-    // Attempt to lock both mutexes, release all if either lock fails
-    bool get_fork() {
-        if ((ptr_r->try_lock() && ptr_l->try_lock())==true) {
-            eating=true;
-            return eating;
+    bool get_forks(){
+        if (this->ptr_r->try_lock() && this->ptr_l->try_lock()){
+            is_eating = true;
+            return is_eating;
         } else {
-            release_fork();
-            return false;
+            is_eating = false;
+            return is_eating;
         }
     }
-
-    void release_fork(){
+    void release_forks(){
         ptr_r->unlock(); ptr_l->unlock();
     }
 
-    // Attempt to get forks->eat, and think if it cannot eat
+    void think(){
+        std::cout << name << " started thinking"<<std::endl;
+
+        t_think = rng();
+        t_think_sum += t_think;
+        n_think++;
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(t_think));
+
+        std::cout << name << " stopped thinking"<<std::endl;
+    }
+
     void eat(){
+        assert(is_eating==true);
+        std::cout << name << " started eating"<<std::endl;
+        t_eat = rng()+50;
+        t_eat_sum += t_eat;
+        n_eat++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(t_eat));
 
-        if(!get_fork()){
-            think();
-        } else {
-            assert(eating==true); // Will abort execution if mutex lock works incorrectly
-
-            std::cout << name << " started eating.\n";
-
-            eatcounter++;
-            eattime_temp = rng();
-            eattime += eattime_temp;
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(eattime_temp));
-            
-            std::cout << name << " stopped eating.\n";
-            release_fork();
-
-            eating = false;
-        } 
-    }
-    
-    int get_eattime() {
-        return eattime_temp;
+        std::cout << name << " stopped eating"<<std::endl;
+        
+        release_forks(); 
+        is_eating = false;
     }
 
-    int get_thinktime() {
-        return thinktime_temp;
+    void join_table() {
+        while (t<t_end) {
+            if (!get_forks()) {
+                think();
+                release_forks();
+            } else {
+                eat();
+            }
+            t += static_cast<float>(t_think + t_eat)/1000;
+        }
     }
+
+    void start(){
+        lifethread = std::thread(&Philosopher::join_table,this);
+        if (t>t_end) {
+            lifethread.join();
+        }
+    }
+
 };
 
-//Table keeps track of all diners, forks and starts/ends the meal
-class Table {
-
-    std::vector<std::string> names;
-    std::vector<Fork*> forklist_ptr;
-    std::vector<Philosopher*> phillist_ptr;
-    std::vector<std::thread*> thread_ptr;
+class Table{
+    std::vector<Fork*> fork_vec;
+    std::vector<Philosopher*> phil_vec;
     std::vector<int> range;
-
-    unsigned int N=0;
-    volatile float t = 0;
-    float tf= 0;
+    unsigned int N;
 
 public:
     Table(unsigned int _N){
         N = _N;
-        tf = 1.5*N; // scale simtime with no. of diners
 
-        /*
-        Name and fork creation
-        Alternatively, a vector of strings could be passed
-        to the constructor with actual names, althought its
-        length will limit the simulation scalability, ie. number of diners.
-        */
-        for (int i=0; i<N; i++) {
-            names.push_back("Diner " + std::to_string(i+1));
-            forklist_ptr.push_back(new Fork);
-            range.push_back(i); // Make this vector to use as for-loop range
+        for (int k=0; k<N; k++) {
+            range.push_back(k);
+            fork_vec.push_back(new Fork);
         }
 
-        /* 
-        Create philosopher objects once forks are done
-        Forks are implemented as circular, first philosopher uses left N-1 and right 0, 
-        all the others use left(j-1) and right (j), the last philosopher uses
-        left(j-1) and right(jmax=N-1) -> first and last share, for N=5:
-
-        obj | i | left | right
-        ----+---+------+------
-        ph1 | 0 | N-1  | 0
-        ph2 | 1 | 0    | 1
-        ph3 | 2 | 1    | 2
-        ph4 | 3 | 2    | 3
-        ph5 | 4 | 3    | N-1
-        ----+---+------+------
-        */
-        for (auto j : range) {
-            if (j==0) { // exception for first instantiation
-                phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[N-1]->fork_pointer,forklist_ptr[j]->fork_pointer));
+        for (auto i : range) {
+            if (i==0) {
+                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),N*1.5,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr));
             } else {
-                phillist_ptr.push_back(new Philosopher(names[j],forklist_ptr[j-1]->fork_pointer,forklist_ptr[j]->fork_pointer));
+                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),N*1.1,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
             }
         }
-        /* 
-        Start meal by spawning N threads with 
-        pointer to callable Philosopher::eat and pointer to 
-        philosopher objects
-        */
-        while (t<tf){ 
-            /* Dynamic thread spawning*/
-            for (auto i : range) {
-                thread_ptr.push_back( new std::thread{&Philosopher::eat,phillist_ptr[i]});
 
-                // Update simulation time
-                t += static_cast< float >(phillist_ptr[i]->get_thinktime() + phillist_ptr[i]->get_eattime())/1000;
-            }
+        for (auto j : range) {
+            phil_vec[j]->start();
         }
     }
 
-    ~Table() {
-        /* Garbage collection */
-
-        // Join all threads first     
-        for (auto thr : range) {
-            thread_ptr[thr]->join();
+    ~Table(){
+        for (auto d : range) {
+            phil_vec[d]->lifethread.join();
+            delete fork_vec[d];
+            delete phil_vec[d];
         }
-
-        /* 
-        This seems to stop weird bug when destructors are called
-        Duration is set slightly above maximum rng() can return, to
-        ensure all threads are able to join before being deallocated 
-        */
-        std::this_thread::sleep_for(std::chrono::milliseconds(60));
-
-        // Deallocate forks, philosophers and threads
-        for (auto ptrs : range) {
-            delete forklist_ptr[ptrs];
-            delete phillist_ptr[ptrs];
-            delete thread_ptr[ptrs];
-        }
-
-        std::cout << "\nMeal lasted " 
-                  << t << "s, " << t-tf << "s overtime.\n";
     }
 };
 
-// Ensure only valid ints are input
-int integerInput(const std::string& message) { 
-    int out=0;
-    while(true) {
-        std::cout << message << std::endl;
-
-        int value(0);
-
-        if (std::cin >> value && abs(value)<21) { //Max 20 diners
-            return abs(value);
-        }
-
-        std::cerr << "Invalid or above limit, enter again:" << std::endl;
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); 
-    }
-}
-
 int main() {
-  
-    Table table( integerInput("How many diners? [2-20]") );
-  
+    int num;
+    std::cout << "How many diners: ";
+    std::cin >> num;
+    Table table(num);
+    
     return 0;
 }
