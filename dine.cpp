@@ -7,6 +7,10 @@
 #include <assert.h>
 #include <random>
 
+struct TIME{
+    volatile float t = 0;
+} t_all;
+
 // Hold forks and public fork ptrs
 class Fork{
     std::mutex fork;
@@ -22,15 +26,11 @@ class Philosopher{
     std::mutex * ptr_l, *ptr_r;
     std::string name = "";
 
-    volatile float t = 0.0;
     volatile float t_end = 0.0;
     
-    volatile int t_think = 0;
-    volatile int t_think_sum = 0;
-    volatile int n_think = 0;
-    volatile int t_eat = 0;
-    volatile int t_eat_sum = 0;
-    volatile int n_eat = 0;
+    volatile int t_think = 0, t_think_sum = 0, n_think = 0;
+    volatile int t_eat = 0,   t_eat_sum = 0,   n_eat = 0;
+
 
     bool is_eating = false;
 
@@ -54,7 +54,7 @@ public:
     ~Philosopher(){        
         std::cout << name << " ate for " << static_cast<float>(t_eat_sum)/1000<< "s, (" 
                   << n_eat << " times), thought for " << static_cast<float>(t_think_sum)/1000 
-                  << "s, \t(" << n_think <<" times)"<<std::endl;
+                  << "s, (" << n_think <<" times)"<<std::endl;
         
     }
 
@@ -98,20 +98,23 @@ public:
     }
 
     void join_table() {
-        while (t<t_end) {
+        while (t_all.t<t_end) {
             if (!get_forks()) {
                 think();
                 release_forks();
             } else {
                 eat();
             }
-            t += static_cast<float>(t_think + t_eat)/1000;
+            t_all.t += static_cast<float>(t_think + t_eat)/1000;
+            
         }
     }
 
     void start(){
         this->lifethread = std::thread(&Philosopher::join_table,this);
-        if (t>t_end) {
+        
+        // Checking joinable to avoid ugly destructor prints
+        if (t_all.t>t_end && lifethread.joinable()) {
             this->lifethread.join();
         }
     }
@@ -124,10 +127,12 @@ class Table{
     std::vector<Philosopher*> phil_vec;
     std::vector<int> range;
     unsigned int N;
+    float simtime = 0;
 
 public:
     Table(unsigned int _N){
         N = _N;
+        simtime = static_cast<float>(N)/3;
 
         for (int k=0; k<N; k++) {
             range.push_back(k);
@@ -136,9 +141,9 @@ public:
 
         for (auto i : range) {
             if (i==0) {
-                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),N*1.5,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr));
+                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr));
             } else {
-                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),N*1.1,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
+                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),simtime,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
             }
         }
 
@@ -149,13 +154,15 @@ public:
 
     ~Table(){
         // Allow all threads to join before garbage collection
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        
         for (auto d : range) {
             phil_vec[d]->lifethread.join();
             delete fork_vec[d];
             delete phil_vec[d];
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        std::cout << "Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n";
     }
 };
 
@@ -165,17 +172,27 @@ public:
                                                   where forks are passed thusly:
                                                   Phil(fork[i-1],fork[i]) to create
                                                   a circular sharing of forks, to provoke
-                                                  deadlock.
+                                                  deadlock. Responsible for garbage-
+                                                  collection at the end of simulation.
 
-    Philosopher( name, t_end, ptr_r, ptr_l )    - constructs 1 philosopher with reference
-                                                  to the pointer of corresponding to its 
-                                                  index and the index before it as right/left fork.
+    Philosopher( name, t_end, ptr_r, ptr_l )    - constructs a philosopher with references
+                                                  to the pointers corresponding to its index 
+                                                  and the index before it as right/left fork.
+
+        Philosopher::start()                    - starts lifethread with callable join_table() 
+                                                  and pointer to itself
+
+        Philosopher::join_table()               - tries to lock fork right & left.
+                                                  if successful, eat() is called. if not,
+                                                  think() is called on a while loop limited
+                                                  by t_end, incremented by eat/think time.
+
     Fork()                                      - holds a fork(mutex) and public ptr to it.
 
-    DEADLOCK SOLUTION
+    DEADLOCK/STARVATION SOLUTION
 
     Two countermeasures are implemented.
-    1)  Any given diner will always attempt to lock its right (highest index) fork.
+    1)  Any given diner will always attempt to lock its right (highest index) fork first.
     
     2)  Should right or left fork acquisiton fail, the diner releases ALL forks,
         then executes think() and tries again.
