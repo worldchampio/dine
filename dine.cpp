@@ -7,14 +7,18 @@
 #include <assert.h>
 #include <random>
 
+// Hold forks and public fork ptrs
 class Fork{
     std::mutex fork;
 public:
     std::mutex* f_ptr = &fork;
 };
 
+/* Holds name, fork ptrs, lifethread and time data for eating/thinking. 
+std::thread lifethread with callable Philisopher::start() initiates 
+meal participation. 
+*/
 class Philosopher{
-    //std::thread lifethread;
     std::mutex * ptr_l, *ptr_r;
     std::string name = "";
 
@@ -48,11 +52,9 @@ public:
     }
 
     ~Philosopher(){        
-        std::cout << name << " ate for " << static_cast<float>(t_eat_sum)/1000
-                  << "s, (" << n_eat 
-                  << " times), thought for " << static_cast<float>(t_think_sum)/1000 
-                  << "s, \t(" << n_think <<" times, \t\t";
-        std::cout << round(t_eat_sum/t)/10 <<"\% eattime) "<<std::endl;
+        std::cout << name << " ate for " << static_cast<float>(t_eat_sum)/1000<< "s, (" 
+                  << n_eat << " times), thought for " << static_cast<float>(t_think_sum)/1000 
+                  << "s, \t(" << n_think <<" times)"<<std::endl;
         
     }
 
@@ -102,21 +104,21 @@ public:
                 release_forks();
             } else {
                 eat();
-                think();
             }
             t += static_cast<float>(t_think + t_eat)/1000;
         }
     }
 
     void start(){
-        lifethread = std::thread(&Philosopher::join_table,this);
+        this->lifethread = std::thread(&Philosopher::join_table,this);
         if (t>t_end) {
-            lifethread.join();
+            this->lifethread.join();
         }
     }
 
 };
 
+// Stores N Forks and N Philosophers, starts meal with Philosopher::lifethread
 class Table{
     std::vector<Fork*> fork_vec;
     std::vector<Philosopher*> phil_vec;
@@ -146,7 +148,7 @@ public:
     }
 
     ~Table(){
-
+        // Allow all threads to join before garbage collection
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         for (auto d : range) {
@@ -157,10 +159,33 @@ public:
     }
 };
 
+/*  DINING PHILOSOPHERS 
+
+    Table(N)                                    - constructs N philosophers and N forks,
+                                                  where forks are passed thusly:
+                                                  Phil(fork[i-1],fork[i]) to create
+                                                  a circular sharing of forks, to provoke
+                                                  deadlock.
+
+    Philosopher( name, t_end, ptr_r, ptr_l )    - constructs 1 philosopher with reference
+                                                  to the pointer of corresponding to its 
+                                                  index and the index before it as right/left fork.
+    Fork()                                      - holds a fork(mutex) and public ptr to it.
+
+    DEADLOCK SOLUTION
+
+    Two countermeasures are implemented.
+    1)  Any given diner will always attempt to lock its right (highest index) fork.
+    
+    2)  Should right or left fork acquisiton fail, the diner releases ALL forks,
+        then executes think() and tries again.
+*/
+
 int main() {
     int num;
     std::cout << "How many diners: ";
     std::cin >> num;
+
     Table table(num);
     
     return 0;
