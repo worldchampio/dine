@@ -1,4 +1,10 @@
 # Dining philosophers
+
+## Quickstart
+
+Clone and execute `build`. Must have `g++`-compiler.
+
+## Description
     Table(N)                                    - constructs N philosophers and N forks,
                                                   where forks are passed thusly:
                                                   Phil(fork[i-1],fork[i]) to create
