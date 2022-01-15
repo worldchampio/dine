@@ -7,9 +7,14 @@
 #include <assert.h>
 #include <random>
 
+/* 
+Global scope struct that holds a volatile float
+that all Philosophers write to, hence volatile.
+It is only read after no longer being written to.
+*/
 struct TIME{
     volatile float t = 0;
-} t_all;
+} t_all; 
 
 // Hold forks and public fork ptrs
 class Fork{
@@ -18,7 +23,8 @@ public:
     std::mutex* f_ptr = &fork;
 };
 
-/* Holds name, fork ptrs, lifethread and time data for eating/thinking. 
+/* 
+Holds name, fork ptrs, lifethread and time data for eating/thinking. 
 std::thread lifethread with callable Philisopher::start() initiates 
 meal participation. 
 */
@@ -30,7 +36,6 @@ class Philosopher{
     
     volatile int t_think = 0, t_think_sum = 0, n_think = 0;
     volatile int t_eat = 0,   t_eat_sum = 0,   n_eat = 0;
-
 
     bool is_eating = false;
 
@@ -98,15 +103,14 @@ public:
     }
 
     void join_table() {
-        while (t_all.t<t_end) {
+        while (t_all.t <t_end) {
             if (!get_forks()) {
                 think();
                 release_forks();
             } else {
                 eat();
             }
-            t_all.t += static_cast<float>(t_think + t_eat)/1000;
-            
+            t_all.t += static_cast<float>(t_think + t_eat)/1000;   
         }
     }
 
@@ -130,12 +134,13 @@ class Table{
     float simtime = 0;
 
 public:
+
     Table(unsigned int _N){
         N = _N;
-        simtime = static_cast<float>(N)/3;
+        simtime = static_cast<float>(N)*1.5;
 
-        for (int k=0; k<N; k++) {
-            range.push_back(k);
+        for (int i=0; i<N; i++) {
+            range.push_back(i);
             fork_vec.push_back(new Fork);
         }
 
@@ -147,8 +152,11 @@ public:
             }
         }
 
-        for (auto j : range) {
-            phil_vec[j]->start();
+        /* Call the function that starts this->lifethread
+        for all philosophers with callable &Philosopher::join_table()
+        */
+        for (auto i : range) {
+            phil_vec[i]->start();
         }
     }
 
@@ -156,12 +164,15 @@ public:
         // Allow all threads to join before garbage collection
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         
-        for (auto d : range) {
-            phil_vec[d]->lifethread.join();
-            delete fork_vec[d];
-            delete phil_vec[d];
+        // Final calls to join, if they were not executed in ~Philosopher()
+        for (auto i : range) {
+            phil_vec[i]->lifethread.join();
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        // Free allocated memory 
+        for (auto i : range) {
+            delete phil_vec[i];
+            delete fork_vec[i];
+        }
         std::cout << "Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n";
     }
 };
@@ -199,6 +210,7 @@ public:
 */
 
 int main() {
+
     int num;
     std::cout << "How many diners: ";
     std::cin >> num;
