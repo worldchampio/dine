@@ -180,17 +180,15 @@ public:
 };
 
 
-int integerInput(const std::string& message)
-{
-    while(true)
-    {
+int integerInput(const std::string& message) {
+    while(true) {
         std::cout << message << std::endl;
 
         int value(0);
 
         if (std::cin >> value && value < 21) // Impose max limit of 20
         {
-            return abs(value); // Return if and only if a valid int is input through cin.
+            return abs(value); // returns N if input is -N
         }
 
         std::cerr << "Value is invalid or above limits, try again." << std::endl;
