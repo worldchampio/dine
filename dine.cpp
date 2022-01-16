@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 #include <assert.h>
+#include <limits>
+#include <cmath>
 #include <random>
 
 /* 
@@ -177,13 +179,29 @@ public:
     }
 };
 
+
+int integerInput(const std::string& message)
+{
+    while(true)
+    {
+        std::cout << message << std::endl;
+
+        int value(0);
+
+        if (std::cin >> value && value < 21) // Impose max limit of 20
+        {
+            return abs(value); // Return if and only if a valid int is input through cin.
+        }
+
+        std::cerr << "Value is invalid or above limits, try again." << std::endl;
+        std::cin.clear();   // Clear all cin error state flags.
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore an unlimited number of chars until newline or end of stream found.
+    }
+}
+
 int main() {
 
-    int num;
-    std::cout << "How many diners: ";
-    std::cin >> num;
-
-    Table table(num);
+    Table table(integerInput("Enter number of diners: "));
     
     return 0;
 }
