@@ -8,6 +8,7 @@
 #include <limits>
 #include <cmath>
 #include <random>
+#include <memory>
 
 /* 
 Global scope struct that holds a volatile float
@@ -129,8 +130,8 @@ public:
 
 // Stores N Forks and N Philosophers, starts meal with Philosopher::lifethread
 class Table{
-    std::vector<Fork*> fork_vec;
-    std::vector<Philosopher*> phil_vec;
+    std::vector<std::unique_ptr<Fork>> fork_vec;
+    std::vector<std::unique_ptr<Philosopher>> phil_vec;
     std::vector<int> range;
     unsigned int N;
     float simtime = 0;
@@ -143,14 +144,16 @@ public:
 
         for (int i=0; i<N; i++) {
             range.push_back(i);
-            fork_vec.push_back(new Fork);
+            fork_vec.push_back(std::make_unique<Fork>());
         }
-
         for (auto i : range) {
             if (i==0) {
-                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr));
+                phil_vec.push_back(
+                    std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr)
+                    );
             } else {
-                phil_vec.push_back(new Philosopher("Diner "+std::to_string(i+1),simtime,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
+                phil_vec.push_back(
+                    std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
             }
         }
 
@@ -163,18 +166,14 @@ public:
     }
 
     ~Table(){
-        // Allow all threads to join before garbage collection
+        // Allow all threads to join
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         
         // Final calls to join, if they were not executed in ~Philosopher()
         for (auto i : range) {
             phil_vec[i]->lifethread.join();
         }
-        // Free allocated memory 
-        for (auto i : range) {
-            delete phil_vec[i];
-            delete fork_vec[i];
-        }
+
         std::cout << "Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n";
     }
 };

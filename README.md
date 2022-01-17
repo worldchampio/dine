@@ -4,7 +4,10 @@
 
 Clone and execute `build`. Must have `g++`-compiler.
 
-## Description
+## TODO
+- Optimize use of std::unique_ptr to avoid copying (pass by const ref const auto& classname)
+
+## Function
     Table(N)                                    - constructs N philosophers and N forks,
                                                   where forks are passed thusly:
                                                   Phil(fork[i-1],fork[i]) to create
