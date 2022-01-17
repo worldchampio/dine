@@ -142,10 +142,12 @@ public:
         N = _N;
         simtime = static_cast<float>(N)*1.5;
 
+        // First loop to create the range and forks
         for (int i=0; i<N; i++) {
             range.push_back(i);
             fork_vec.push_back(std::make_unique<Fork>());
         }
+
         for (auto i : range) {
             if (i==0) {
                 phil_vec.push_back(
@@ -157,27 +159,27 @@ public:
             }
         }
 
-        /* Call the function that starts this->lifethread
-        for all philosophers with callable &Philosopher::join_table()
+        /* Call start for every Philosopher in phil_vec,
+        starting Philosopher::lifethread with callable
+        Philosopher::eat
         */
-        for (auto i : range) {
-            phil_vec[i]->start();
+        for (const auto& Philosopher : phil_vec){
+            Philosopher->start();
         }
     }
 
     ~Table(){
-        // Allow all threads to join
+        // Allow all threads to join (try to remove this)
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
         
         // Final calls to join, if they were not executed in ~Philosopher()
-        for (auto i : range) {
-            phil_vec[i]->lifethread.join();
+        for (const auto& Philosopher : phil_vec) {
+            Philosopher->lifethread.join();
         }
 
         std::cout << "Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n";
     }
 };
-
 
 int integerInput(const std::string& message) {
     while(true) {

@@ -2,18 +2,15 @@
 
 ## Quickstart
 
-Clone and execute `build`. Must have `g++`-compiler.
+Clone, then execute `build`. Must have `g++`-compiler.
 
-## TODO
-- Optimize use of std::unique_ptr to avoid copying (pass by const ref const auto& classname)
 
-## Function
+## Functionality
     Table(N)                                    - constructs N philosophers and N forks,
                                                   where forks are passed thusly:
                                                   Phil(fork[i-1],fork[i]) to create
                                                   a circular sharing of forks, to provoke
-                                                  deadlock. Responsible for garbage-
-                                                  collection at the end of simulation.
+                                                  deadlock.
 
     Philosopher( name, t_end, ptr_r, ptr_l )    - constructs a philosopher with references
                                                   to the pointers corresponding to its index 
