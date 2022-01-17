@@ -133,13 +133,12 @@ class Table{
     std::vector<std::unique_ptr<Fork>> fork_vec;
     std::vector<std::unique_ptr<Philosopher>> phil_vec;
     std::vector<int> range;
-    unsigned int N;
     float simtime = 0;
 
 public:
 
-    Table(unsigned int _N){
-        N = _N;
+    Table(const int& N){
+        // Scale simtime with amount of diners
         simtime = static_cast<float>(N)*1.5;
 
         // First loop to create the range and forks
@@ -148,7 +147,11 @@ public:
             fork_vec.push_back(std::make_unique<Fork>());
         }
 
-        for (auto i : range) {
+        /* 
+        As any instantiation of a Philosopher requires two Forks,
+        the loops must run in sequence.
+        */
+        for (const auto& i : range) {
             if (i==0) {
                 phil_vec.push_back(
                     std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr)
@@ -168,16 +171,15 @@ public:
         }
     }
 
-    ~Table(){
-        // Allow all threads to join (try to remove this)
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
-        
+    ~Table(){        
         // Final calls to join, if they were not executed in ~Philosopher()
         for (const auto& Philosopher : phil_vec) {
             Philosopher->lifethread.join();
         }
 
-        std::cout << "Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n";
+        std::cout <<"+------------------------------------------+\n" 
+                  <<"Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n"
+                  <<"+------------------------------------------+\n";
     }
 };
 

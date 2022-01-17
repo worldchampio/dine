@@ -4,6 +4,9 @@
 
 Clone, then execute `build`. Must have `g++`-compiler.
 
+## TODO
+    - Time complexity?
+
 
 ## Functionality
     Table(N)                                    - constructs N philosophers and N forks,
