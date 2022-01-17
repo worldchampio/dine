@@ -1,3 +1,14 @@
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <string>
+#include <assert.h>
+#include <limits>
+#include <cmath>
+#include <random>
+
 /* 
 Global scope struct that holds a volatile float
 that all Philosophers write to, hence volatile.
