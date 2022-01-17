@@ -109,7 +109,7 @@ public:
         while (t_all.t <t_end) {
             if (!get_forks()) {
                 think();
-                release_forks();
+                release_forks();  // Deadlock stopper
             } else {
                 eat();
             }
