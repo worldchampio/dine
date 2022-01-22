@@ -108,6 +108,11 @@ public:
 
     void join_table() {
         while (t_all.t <t_end) {
+            /*
+            The solution to the deadlock is implemented here
+            by making any philosopher failing to lock BOTH
+            forks release ANY it locked.
+            */
             (!get_forks()) ? (think(), release_forks()) : eat();
 
             t_all.t += static_cast<float>(t_think + t_eat)/1000;   
