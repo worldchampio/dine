@@ -75,6 +75,7 @@ public:
             return is_eating;
         }
     }
+
     void release_forks(){
         ptr_r->unlock(); ptr_l->unlock();
     }
@@ -107,12 +108,8 @@ public:
 
     void join_table() {
         while (t_all.t <t_end) {
-            if (!get_forks()) {
-                think();
-                release_forks();  // Deadlock stopper
-            } else {
-                eat();
-            }
+            (!get_forks()) ? (think(), release_forks()) : eat();
+
             t_all.t += static_cast<float>(t_think + t_eat)/1000;   
         }
     }
