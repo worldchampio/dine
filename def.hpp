@@ -188,7 +188,6 @@ public:
 int integerInput(const std::string& message) {
     while(true) {
         std::cout << message << std::endl;
-
         int value(0);
 
         if (std::cin >> value && value < 21) // Impose max limit of 20
