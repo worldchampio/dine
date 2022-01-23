@@ -2,7 +2,7 @@
 
 int main() {
 
-    Table table(integerInput("Enter number of diners: "));
+    Table table("Enter number of diners: ");
     
     return 0;
 }

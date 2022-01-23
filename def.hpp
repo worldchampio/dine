@@ -136,10 +136,27 @@ class Table{
     std::vector<std::unique_ptr<Philosopher>> phil_vec;
     std::vector<int> range;
     float simtime = 0;
+    unsigned int N = 0;
 
 public:
+    int integerInput(const std::string& message) {
+        while(true) {
+            std::cout << message << std::endl;
+            int value(0);
 
-    Table(const int& N){
+            if (std::cin >> value && value < 21) // Impose max limit of 20
+            {
+                return abs(value); // returns N if input is -N
+            }
+
+            std::cerr << "Value is invalid or above limits, try again." << std::endl;
+            std::cin.clear();   // Clear all cin error state flags.
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore an unlimited number of chars until newline or end of stream found.
+        }
+    }
+
+    Table(const std::string& msg){
+        N = integerInput(msg);
         // Scale simtime with amount of diners
         simtime = static_cast<float>(N)*1.5;
 
@@ -184,19 +201,3 @@ public:
                   <<"+------------------------------------------+\n";
     }
 };
-
-int integerInput(const std::string& message) {
-    while(true) {
-        std::cout << message << std::endl;
-        int value(0);
-
-        if (std::cin >> value && value < 21) // Impose max limit of 20
-        {
-            return abs(value); // returns N if input is -N
-        }
-
-        std::cerr << "Value is invalid or above limits, try again." << std::endl;
-        std::cin.clear();   // Clear all cin error state flags.
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore an unlimited number of chars until newline or end of stream found.
-    }
-}
