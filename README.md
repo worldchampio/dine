@@ -1,5 +1,9 @@
 # Dining philosophers
 
+## Tested on
+* g++ (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0
+* MSVC C++ Compiler
+
 ## Functionality
     Table(N)                                    - constructs N philosophers and N forks,
                                                   where forks are passed thusly:
