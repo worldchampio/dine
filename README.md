@@ -2,7 +2,7 @@
 
 ## Tested on
 * g++ (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0
-* MSVC C++ Compiler
+* Microsoft C/C++ Optimizing Compiler Version 19.16.27045 for x86
 
 ## Functionality
     Table(N)                                    - constructs N philosophers and N forks,
