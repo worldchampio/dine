@@ -9,6 +9,7 @@
 #include <cmath>
 #include <random>
 #include <memory>
+#include <atomic>
 
 /* 
 Global scope struct that holds a volatile float
@@ -16,8 +17,8 @@ that all Philosophers write to, hence volatile.
 It is only read after no longer being written to.
 */
 struct TIME{
-    volatile float t = 0;
-} t_all; 
+    std::atomic<double> t;
+} t_all;
 
 // Hold forks and public fork ptrs
 class Fork{
@@ -35,10 +36,10 @@ class Philosopher{
     std::mutex * ptr_l, *ptr_r;
     std::string name = "";
 
-    volatile float t_end = 0.0;
+    double t_end = 0.0;
     
-    volatile int t_think = 0, t_think_sum = 0, n_think = 0;
-    volatile int t_eat = 0,   t_eat_sum = 0,   n_eat = 0;
+    int t_think = 0, t_think_sum = 0, n_think = 0;
+    int t_eat = 0,   t_eat_sum = 0,   n_eat = 0;
 
     bool is_eating = false;
 
@@ -52,7 +53,7 @@ class Philosopher{
 public:
     std::thread lifethread;
 
-    Philosopher(std::string _name, float _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r){
+    Philosopher(std::string _name, double _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r){
         name = _name;
         t_end= _t_end;
         ptr_l = _ptr_l;
@@ -60,8 +61,8 @@ public:
     }
 
     ~Philosopher(){        
-        std::cout << name << " ate for " << static_cast<float>(t_eat_sum)/1000<< "s, (" 
-                  << n_eat << " times), thought for " << static_cast<float>(t_think_sum)/1000 
+        std::cout << name << " ate for " << static_cast<double>(t_eat_sum)/1000<< "s, (" 
+                  << n_eat << " times), thought for " << static_cast<double>(t_think_sum)/1000 
                   << "s, (" << n_think <<" times)"<<std::endl;
         
     }
@@ -115,7 +116,10 @@ public:
             */
             (!get_forks()) ? (think(), release_forks()) : eat();
 
-            t_all.t += static_cast<float>(t_think + t_eat)/1000;   
+            t_all.t.store( 
+                t_all.t.load(std::memory_order_relaxed) + static_cast<double>(t_think + t_eat)/1000, 
+                std::memory_order_relaxed
+                );   
         }
     }
 
