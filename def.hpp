@@ -12,9 +12,8 @@
 #include <atomic>
 
 /* 
-Global scope struct that holds a volatile float
-that all Philosophers write to, hence volatile.
-It is only read after no longer being written to.
+Global scope struct that holds an atomic double t
+that all Philosophers write to
 */
 struct TIME{
     std::atomic<double> t;
@@ -38,6 +37,10 @@ class Philosopher{
 
     double t_end = 0.0;
     
+    /*
+    As each Philosopher object tracks its own times/counts,
+    these variables do not need to be atomic
+    */
     int t_think = 0, t_think_sum = 0, n_think = 0;
     int t_eat = 0,   t_eat_sum = 0,   n_eat = 0;
 
