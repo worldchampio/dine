@@ -1,13 +1,5 @@
 # Dining philosophers
 
-## Quickstart
-
-Clone, then execute `build`. Must have `g++`-compiler.
-
-## TODO
-    - Time complexity?
-
-
 ## Functionality
     Table(N)                                    - constructs N philosophers and N forks,
                                                   where forks are passed thusly:
@@ -28,6 +20,9 @@ Clone, then execute `build`. Must have `g++`-compiler.
                                                   by t_end, incremented by eat/think time.
 
     Fork()                                      - holds a fork(mutex) and public ptr to it.
+
+    struct TIME                                 - holds atomic double t, shared by all
+                                                  threads
 
     DEADLOCK/STARVATION SOLUTION
 
