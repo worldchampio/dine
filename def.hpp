@@ -32,24 +32,29 @@ std::thread lifethread with callable Philisopher::start() initiates
 meal participation. 
 */
 class Philosopher{
-    std::mutex * ptr_l, *ptr_r;
-    std::string name = "";
+    std::mutex     *ptr_l, *ptr_r;
+    std::string     name  = "";
 
-    double t_end = 0.0;
+    double          t_end = 0.0;
     
     /*
     As each Philosopher object tracks its own times/counts,
     these variables do not need to be atomic
     */
-    int t_think = 0, t_think_sum = 0, n_think = 0;
-    int t_eat = 0,   t_eat_sum = 0,   n_eat = 0;
+    int     t_think     = 0;
+    int     t_think_sum = 0;
+    int     n_think     = 0;
+    int     t_eat       = 0;   
+    int     t_eat_sum   = 0;
+    int     n_eat       = 0;
 
     bool is_eating = false;
 
     int rng() {
-        std::random_device dev;
-        std::mt19937 rng(dev());
+        std::random_device  dev;
+        std::mt19937        rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist6(1,50);
+        
         return dist6(rng);
     }
 
@@ -57,8 +62,8 @@ public:
     std::thread lifethread;
 
     Philosopher(std::string _name, double _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r){
-        name = _name;
-        t_end= _t_end;
+        name  = _name;
+        t_end = _t_end;
         ptr_l = _ptr_l;
         ptr_r = _ptr_r;
     }
@@ -139,11 +144,12 @@ public:
 
 // Stores N Forks and N Philosophers, starts meal with Philosopher::lifethread
 class Table{
-    std::vector<std::unique_ptr<Fork>> fork_vec;
+    std::vector<std::unique_ptr<Fork>>        fork_vec;
     std::vector<std::unique_ptr<Philosopher>> phil_vec;
-    std::vector<int> range;
-    float simtime = 0;
-    unsigned int N = 0;
+    std::vector<int>                          range;
+    
+    float           simtime = 0;
+    unsigned int    N       = 0;
 
 public:
     int integerInput(const std::string& message) {
