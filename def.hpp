@@ -41,12 +41,12 @@ class Philosopher{
     As each Philosopher object tracks its own times/counts,
     these variables do not need to be atomic
     */
-    int     t_think     = 0;
-    int     t_think_sum = 0;
-    int     n_think     = 0;
-    int     t_eat       = 0;   
-    int     t_eat_sum   = 0;
-    int     n_eat       = 0;
+    int t_think{ 0 };
+    int t_think_sum{ 0 };
+    int n_think{ 0 };
+    int t_eat{ 0 };   
+    int t_eat_sum{ 0 };
+    int n_eat{ 0 };
 
     bool is_eating = false;
 
@@ -148,8 +148,8 @@ class Table{
     std::vector<std::unique_ptr<Philosopher>> phil_vec;
     std::vector<int>                          range;
     
-    float           simtime = 0;
-    unsigned int    N       = 0;
+    float simtime{ 0 };
+    unsigned int N{ 0 };
 
 public:
     int integerInput(const std::string& message) {
