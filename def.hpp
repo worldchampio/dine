@@ -23,7 +23,7 @@ struct TIME{
 class Fork{
     std::mutex fork;
 public:
-    std::mutex* f_ptr = &fork;
+    std::mutex* f_ptr{&fork};
 };
 
 /* 
@@ -33,9 +33,9 @@ meal participation.
 */
 class Philosopher{
     std::mutex     *ptr_l, *ptr_r;
-    std::string     name  = "";
+    std::string     name{ "" };
 
-    double          t_end = 0.0;
+    double          t_end{ 0.0 };
     
     /*
     As each Philosopher object tracks its own times/counts,
@@ -50,10 +50,11 @@ class Philosopher{
 
     bool is_eating = false;
 
-    int rng() {
+    int rng() 
+    {
         std::random_device  dev;
         std::mt19937        rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist6(1,50);
+        std::uniform_int_distribution<std::mt19937::result_type> dist6(1,200);
         
         return dist6(rng);
     }
@@ -61,35 +62,34 @@ class Philosopher{
 public:
     std::thread lifethread;
 
-    Philosopher(std::string _name, double _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r){
+    Philosopher(std::string _name, double _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r)
+    {
         name  = _name;
         t_end = _t_end;
         ptr_l = _ptr_l;
         ptr_r = _ptr_r;
     }
 
-    ~Philosopher(){        
+    ~Philosopher()
+    {        
         std::cout << name << " ate for " << static_cast<double>(t_eat_sum)/1000<< "s, (" 
                   << n_eat << " times), thought for " << static_cast<double>(t_think_sum)/1000 
                   << "s, (" << n_think <<" times)"<<std::endl;
-        
     }
 
-    bool get_forks(){
-        if (this->ptr_r->try_lock() && this->ptr_l->try_lock()){
-            is_eating = true;
-            return is_eating;
-        } else {
-            is_eating = false;
-            return is_eating;
-        }
+    bool get_forks()
+    {
+        is_eating = (this->ptr_r->try_lock() && this->ptr_l->try_lock()) ? true : false;
+        return is_eating;
     }
 
-    void release_forks(){
+    void release_forks()
+    {
         ptr_r->unlock(); ptr_l->unlock();
     }
 
-    void think(){
+    void think()
+    {
         std::cout << name << " started thinking"<<std::endl;
 
         t_think = rng();
@@ -101,7 +101,8 @@ public:
         std::cout << name << " stopped thinking"<<std::endl;
     }
 
-    void eat(){
+    void eat()
+    {
         assert(is_eating==true);
         std::cout << name << " started eating"<<std::endl;
         t_eat = rng();
@@ -115,8 +116,10 @@ public:
         is_eating = false;
     }
 
-    void join_table() {
-        while (t_all.t <t_end) {
+    void join_table() 
+    {
+        while (t_all.t <t_end) 
+        {
             /*
             The solution to the deadlock is implemented here
             by making any philosopher failing to lock BOTH
@@ -131,11 +134,13 @@ public:
         }
     }
 
-    void start(){
+    void start()
+    {
         this->lifethread = std::thread(&Philosopher::join_table,this);
         
         // Checking joinable to avoid ugly destructor prints
-        if (t_all.t>t_end && lifethread.joinable()) {
+        if (t_all.t>t_end && lifethread.joinable()) 
+        {
             this->lifethread.join();
         }
     }
@@ -143,7 +148,8 @@ public:
 };
 
 // Stores N Forks and N Philosophers, starts meal with Philosopher::lifethread
-class Table{
+class Table
+{
     std::vector<std::unique_ptr<Fork>>        fork_vec;
     std::vector<std::unique_ptr<Philosopher>> phil_vec;
     std::vector<int>                          range;
@@ -152,29 +158,14 @@ class Table{
     unsigned int N{ 0 };
 
 public:
-    int integerInput(const std::string& message) {
-        while(true) {
-            std::cout << message << std::endl;
-            int value(0);
-
-            if (std::cin >> value && value < 21) // Impose max limit of 20
-            {
-                return abs(value); // returns N if input is -N
-            }
-
-            std::cerr << "Value is invalid or above limits, try again." << std::endl;
-            std::cin.clear();   // Clear all cin error state flags.
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore an unlimited number of chars until newline or end of stream found.
-        }
-    }
-
-    Table(const std::string& msg){
-        N = integerInput(msg);
+    Table(int N)
+    {
         // Scale simtime with amount of diners
         simtime = static_cast<float>(N)*1.5;
 
         // First loop to create the range and forks
-        for (int i=0; i<N; i++) {
+        for (int i=0; i<N; i++) 
+        {
             range.push_back(i);
             fork_vec.push_back(std::make_unique<Fork>());
         }
@@ -183,12 +174,15 @@ public:
         As any instantiation of a Philosopher requires two Forks,
         the loops must run in sequence.
         */
-        for (const auto& i : range) {
-            if (i==0) {
+        for (const auto& i : range) 
+        {
+            if (i==0) 
+            {
                 phil_vec.push_back(
-                    std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr)
-                    );
-            } else {
+                    std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr));
+            } 
+            else 
+            {
                 phil_vec.push_back(
                     std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
             }
@@ -198,14 +192,17 @@ public:
         starting Philosopher::lifethread with callable
         Philosopher::eat
         */
-        for (const auto& Philosopher : phil_vec){
+        for (const auto& Philosopher : phil_vec)
+        {
             Philosopher->start();
         }
     }
 
-    ~Table(){        
+    ~Table()
+    {        
         // Final calls to join, if they were not executed in ~Philosopher()
-        for (const auto& Philosopher : phil_vec) {
+        for (const auto& Philosopher : phil_vec)
+        {
             Philosopher->lifethread.join();
         }
 
