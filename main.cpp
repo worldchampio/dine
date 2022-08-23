@@ -1,16 +1,8 @@
 #include "dine.hpp"
-#include <string>
-#include <sstream>
-
+#include <iostream>
+constexpr auto fallback{5};
 int main(int argc, char** argv) {
-
-    int num;
-    std::stringstream ss;
-
-    std::string numstr {argc > 1 ? (argv[1]) : "5"};
-    ss << numstr;
-    ss >> num;
-    Table table(num);
-    
+    auto num{argc > 1 ? (std::atoi(argv[1])) : fallback};
+    Table table(!int{num}?fallback:num);
     return 0;
 }
