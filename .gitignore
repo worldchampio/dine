@@ -2,5 +2,5 @@
 *.exe
 *.bin
 dine
-
+.vscode
 *.obj
