@@ -7,12 +7,11 @@
 #include <vector>
 
 /* 
-Global scope struct that holds an atomic double t
+Global scope atomic double t
 that all Philosophers write to
 */
-static struct TIME{
-    std::atomic<double> t;
-} t_all;
+static std::atomic<double> t;
+
 
 // Hold forks and public fork ptrs
 class Fork{

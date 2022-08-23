@@ -66,7 +66,7 @@ void Philosopher::eat()
 
 void Philosopher::join_table() 
 {
-    while (t_all.t <t_end) 
+    while (t <t_end) 
     {
         /*
         The solution to the deadlock is implemented here
@@ -74,8 +74,8 @@ void Philosopher::join_table()
         forks release ANY it locked.
         */
         (!get_forks()) ? (think(), release_forks()) : eat();
-        t_all.t.store( 
-            t_all.t.load(std::memory_order_relaxed) + static_cast<double>(t_think + t_eat)/1000, 
+        t.store( 
+            t.load(std::memory_order_relaxed) + static_cast<double>(t_think + t_eat)/1000, 
             std::memory_order_relaxed);   
     }
 }
@@ -84,7 +84,7 @@ void Philosopher::start()
 {
     this->lifethread = std::thread(&Philosopher::join_table,this);
     // Checking joinable to avoid ugly destructor prints
-    if (t_all.t>t_end && lifethread.joinable()) 
+    if (t>t_end && lifethread.joinable()) 
     {
         this->lifethread.join();
     }
@@ -139,6 +139,6 @@ Table::~Table()
     }
 
     std::cout <<"+------------------------------------------+\n" 
-                <<"Simulation time: "<<t_all.t<<"s, "<<t_all.t - simtime<<"s overtime.\n"
+                <<"Simulation time: "<< t <<"s, "<<t - simtime<<"s overtime.\n"
                 <<"+------------------------------------------+\n";
 }
