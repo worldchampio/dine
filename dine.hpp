@@ -11,7 +11,8 @@ Global scope atomic double t
 that all Philosophers write to
 */
 static std::atomic<double> t;
-
+static std::atomic<int> thinks;
+static std::atomic<int> eats;
 
 // Hold forks and public fork ptrs
 class Fork{
@@ -33,10 +34,8 @@ class Philosopher{
     As each Philosopher object tracks its own times/counts,
     these variables do not need to be atomic
     */
-    int t_think{ 0 };
     int t_think_sum{ 0 };
     int n_think{ 0 };
-    int t_eat{ 0 };   
     int t_eat_sum{ 0 };
     int n_eat{ 0 };
     bool is_eating{false};
@@ -48,8 +47,8 @@ public:
     ~Philosopher();
     bool get_forks();
     void release_forks();
-    void think();
-    void eat();
+    int think();
+    int eat();
     void join_table();
     void start();
 };

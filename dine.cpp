@@ -41,42 +41,49 @@ void Philosopher::release_forks()
     ptr_r->unlock(); ptr_l->unlock();
 }
 
-void Philosopher::think()
+int Philosopher::think()
 {
     std::cout << name << " started thinking"<<std::endl;
-    t_think = rng();
+    const auto t_think{ rng() };
     t_think_sum += t_think;
     n_think++;
     std::this_thread::sleep_for(std::chrono::milliseconds(t_think));
     std::cout << name << " stopped thinking"<<std::endl;
+    return t_think;
 }
 
-void Philosopher::eat()
+int Philosopher::eat()
 {
     assert(is_eating==true);
     std::cout << name << " started eating"<<std::endl;
-    t_eat = rng();
+    const auto t_eat{ rng() };
     t_eat_sum += t_eat;
     n_eat++;
     std::this_thread::sleep_for(std::chrono::milliseconds(t_eat));
     std::cout << name << " stopped eating"<<std::endl;
     release_forks(); 
     is_eating = false;
+    return t_eat;
 }
 
 void Philosopher::join_table() 
 {
     while (t <t_end) 
     {
-        /*
-        The solution to the deadlock is implemented here
-        by making any philosopher failing to lock BOTH
-        forks release ANY it locked.
-        */
-        (!get_forks()) ? (think(), release_forks()) : eat();
-        t.store( 
-            t.load(std::memory_order_relaxed) + static_cast<double>(t_think + t_eat)/1000, 
-            std::memory_order_relaxed);   
+        int t_think{ 0 }; 
+        int t_eat{ 0 };
+        if(!get_forks())
+        {
+            t_think = think();
+            thinks.store(thinks.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
+            release_forks();
+        } 
+        else 
+        {
+            t_eat = eat();
+            eats.store(eats.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
+        }
+        t.store(t.load(std::memory_order_relaxed) + static_cast<double>(t_think + t_eat)/1000, std::memory_order_relaxed);   
     }
 }
 
@@ -138,7 +145,7 @@ Table::~Table()
         Philosopher->lifethread.join();
     }
 
-    std::cout <<"+------------------------------------------+\n" 
-                <<"Simulation time: "<< t <<"s, "<<t - simtime<<"s overtime.\n"
-                <<"+------------------------------------------+\n";
+    std::cout <<"+----------------------------------------------------------+\n" 
+              <<"Simulation time: "<< t <<"s, "<<t - simtime<<"s overtime. "<<thinks<<" thinks, "<<eats<<" eats. \n"
+              <<"+----------------------------------------------------------+"<<std::endl;
 }
