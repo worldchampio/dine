@@ -102,49 +102,26 @@ Table::Table(int N)
     // Scale simtime with amount of diners
     simtime = static_cast<float>(N)*1.5;
 
-    // First loop to create the range and forks
+    // Create Forks and range
     for (int i=0; i<N; i++) 
     {
         range.push_back(i);
         fork_vec.push_back(std::make_unique<Fork>());
     }
-
-    /* 
-    As any instantiation of a Philosopher requires two Forks,
-    the loops must run in sequence.
-    */
+    // Make Philosophers
     for (const auto& i : range) 
-    {
-        if (i==0) 
-        {
-            phil_vec.push_back(
-                std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[N-1]->f_ptr, fork_vec[i]->f_ptr));
-        } 
-        else 
-        {
-            phil_vec.push_back(
-                std::make_unique<Philosopher>("Diner "+std::to_string(i+1),simtime,fork_vec[i-1]->f_ptr, fork_vec[i]->f_ptr));
-        }
-    }
-
-    /* Call start for every Philosopher in phil_vec,
-    starting Philosopher::lifethread with callable
-    Philosopher::eat
-    */
+        phil_vec.push_back(
+            std::make_unique<Philosopher>("Diner "+std::to_string(i+1), simtime, fork_vec[i==0 ? N-1 : i-1]->f_ptr,fork_vec[i]->f_ptr)
+        );
     for (const auto& Philosopher : phil_vec)
-    {
         Philosopher->start();
-    }
 }
 
 Table::~Table()
 {        
     // Final calls to join, if they were not executed in ~Philosopher()
     for (const auto& Philosopher : phil_vec)
-    {
         Philosopher->lifethread.join();
-    }
-
     std::cout <<"+----------------------------------------------------------+\n" 
               <<"Simulation time: "<< t <<"s, "<<t - simtime<<"s overtime. "<<thinks<<" thinks, "<<eats<<" eats. \n"
               <<"+----------------------------------------------------------+"<<std::endl;
