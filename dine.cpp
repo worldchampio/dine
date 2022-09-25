@@ -7,27 +7,27 @@
 #include <atomic>
 #include "dine.hpp"
 
-int Philosopher::rng() 
+int Philosopher::rng(int min=1, int max=200) 
 {
     std::random_device  dev;
     std::mt19937        rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,200);
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(min,max);
     return dist6(rng);
 }
 
-Philosopher::Philosopher(std::string _name, double _t_end, std::mutex* _ptr_l, std::mutex* _ptr_r) :
-name{_name},
-t_end{_t_end},
-ptr_l{_ptr_l},
-ptr_r{_ptr_r}
-{
-}
+Philosopher::Philosopher(std::string name, double t_end, std::mutex* ptr_l, std::mutex* ptr_r) :
+name{name},
+t_end{t_end},
+ptr_l{ptr_l},
+ptr_r{ptr_r}
+{}
 
 Philosopher::~Philosopher()
 {
-    std::cout << name << " ate for " << static_cast<double>(t_eat_sum)/1000<< "s, (" 
-                << n_eat << " times), thought for " << static_cast<double>(t_think_sum)/1000 
-                << "s, (" << n_think <<" times)"<<std::endl;
+    std::cout << name 
+    << " ate for " << static_cast<double>(t_eat_sum)/1000<< "s, (" << n_eat 
+    << " times), thought for " << static_cast<double>(t_think_sum)/1000           
+    << "s, (" << n_think <<" times)"<<std::endl;
 }
 
 bool Philosopher::get_forks()
@@ -90,11 +90,8 @@ void Philosopher::join_table()
 void Philosopher::start()
 {
     this->lifethread = std::thread(&Philosopher::join_table,this);
-    // Checking joinable to avoid ugly destructor prints
     if (t>t_end && lifethread.joinable()) 
-    {
         this->lifethread.join();
-    }
 }
 
 Table::Table(int N)
