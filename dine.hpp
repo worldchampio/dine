@@ -10,6 +10,15 @@ static std::atomic<double> t;
 static std::atomic<int> thinks;
 static std::atomic<int> eats;
 
+/**
+Return a random integer between given limits.
+Limits default to (1-200).
+@param min Lower limit for random number.
+@param max Upper limit for random number.
+@return Random number in range(min, max)
+*/
+int rng(int min, int max);
+
 class Fork{
     std::mutex fork;
 public:
@@ -29,10 +38,12 @@ public:
     ~Philosopher();
     void start();
 private:
-    std::mutex* ptr_l;
-    std::mutex* ptr_r;
     std::string name{ "" };
     double      t_end{ 0.0 };
+    std::mutex* ptr_l;
+    std::mutex* ptr_r;
+
+
     /*
     As each Philosopher object tracks its own times/counts,
     these variables do not need to be atomic
@@ -53,14 +64,6 @@ private:
     @return total time spent 'eating'.
      */
     int eat();
-    /**
-     Return a random integer between given limits.
-     Limits default to (1-200).
-     @param min Lower limit for random number.
-     @param max Upper limit for random number.
-     @return Random number in range(min, max)
-     */
-    int rng(int min, int max);
     /**
      Attempt to lock the mutexes the Philosopher has pointers to.
      @return Success status.
@@ -83,5 +86,4 @@ private:
     std::vector<std::unique_ptr<Philosopher>> phil_vec;
     std::vector<int> range;
     float simtime{ 0 };
-    unsigned int N{ 0 };
 };

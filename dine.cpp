@@ -7,7 +7,30 @@
 #include <atomic>
 #include "dine.hpp"
 
-int Philosopher::rng(int min=1, int max=200) 
+std::vector Names {
+"Thomas Aquinas",
+"Aristotle",
+"Confucius",
+"René Descartes",
+"Ralph Waldo Emerson",
+"Michel Foucault",
+"David Hume",
+"Immanuel Kant",
+"Søren Kierkegaard",
+"Lao-Tzu",
+"John Locke",
+"Niccolo Machiavelli",
+"Karl Marx",
+"John Stuart Mill",
+"Friedrich Nietzsche",
+"Plato",
+"Jean-Jacques Rousseau",
+"Jean-Paul Sartre",
+"Socrates",
+"Ludwig Wittgenstein"
+};
+
+int rng(int min=1, int max=200) 
 {
     std::random_device  dev;
     std::mt19937        rng(dev());
@@ -97,8 +120,8 @@ void Philosopher::start()
 Table::Table(int N)
 {
     // Scale simtime with amount of diners
+    N = std::clamp(N,0,static_cast<int>(Names.size()-1));
     simtime = static_cast<float>(N)*1.5;
-
     // Create Forks and range
     for (int i=0; i<N; i++) 
     {
@@ -107,9 +130,13 @@ Table::Table(int N)
     }
     // Make Philosophers
     for (const auto& i : range) 
+    {
+        int indexToPop{rng(0,Names.size()-1)};
         phil_vec.push_back(
-            std::make_unique<Philosopher>("Diner "+std::to_string(i+1), simtime, fork_vec[i==0 ? N-1 : i-1]->f_ptr,fork_vec[i]->f_ptr)
+            std::make_unique<Philosopher>(Names[indexToPop], simtime, fork_vec[i==0 ? N-1 : i-1]->f_ptr,fork_vec[i]->f_ptr)
         );
+        Names.erase(Names.begin()+indexToPop);
+    }
     for (const auto& Philosopher : phil_vec)
         Philosopher->start();
 }
